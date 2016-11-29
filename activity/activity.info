@@ -1,0 +1,7 @@
+[Activity]
+name = Diccionario Guarani Castellano
+activity_version = 2
+bundle_id = org.sugarlabs.DiccionarioGuarani
+exec = sugar-activity activity.Hablando_Guarani
+icon = activity-icon
+license = GPLv2+
