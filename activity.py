@@ -14,7 +14,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+import os
 import logging
+
 from gettext import gettext as _
 
 from gi.repository import Gtk
@@ -24,7 +26,6 @@ from gi.repository import GdkPixbuf
 from sugar3.activity import activity
 from sugar3.graphics.toolbarbox import ToolbarBox
 from sugar3.activity.widgets import ActivityButton
-from sugar3.activity.widgets import ActivityToolbox
 from sugar3.activity.widgets import TitleEntry
 from sugar3.activity.widgets import StopButton
 from sugar3.activity.widgets import ShareButton
@@ -60,18 +61,14 @@ class HablandoGuarani(activity.Activity):
         pixbuf = GdkPixbuf.Pixbuf.new_from_file('images/logo.jpg')
         win.add(Gtk.Image.new_from_pixbuf(pixbuf.scale_simple(400, 100, GdkPixbuf.InterpType.BILINEAR)))
 
-        achehety = Gtk.Image()
-        traducido = Gtk.TextView()
-        traducido.set_editable(False)
-        traducido.set_wrap_mode(Gtk.WrapMode.WORD)
-        dic = Gtk.TextView()
-        textbuffer = dic.get_buffer()
-        dic.set_wrap_mode(Gtk.WrapMode.WORD)
-        dic.set_editable(False)
+        self.textview = Gtk.TextView()
+        self.textview.set_editable(False)
+        self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
+        win.add(self.textview)
         
         self.buttonbox_letters = Gtk.HButtonBox()  
-        buttonbox_letters.set_layout(Gtk.ButtonBoxStyle.CENTER)
-        win.add(buttonbox_letters)
+        self.buttonbox_letters.set_layout(Gtk.ButtonBoxStyle.CENTER)
+        win.add(self.buttonbox_letters)
 
         bo1 = self.make_button('A', ORANGE)
         bo2 = self.make_button('E')
@@ -81,38 +78,31 @@ class HablandoGuarani(activity.Activity):
         bo6 = self.make_button('Y')
         bo7 = self.make_button('G', ORANGE)
 
-        #connect
-        pixbuf = Gtk.gdk.pixbuf_new_from_file('images/achegety.jpg')
-        scaled_pixbuf = pixbuf.scale_simple(600, 200, GdkPixbuf.InterpType.BILINEAR)
-        achehety.set_from_pixbuf(scaled_pixbuf)
-
-        #Cargando archivo .txt
-        infile = open("lang/guarani/dic.txt", "r")
-        if infile:
-            string = infile.read()      
-            infile.close()
-            textbuffer.set_text(string)
-
         hbox2 = Gtk.HBox()
+        win.add(hbox2)
+
+        achehety = Gtk.Image()
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file('images/achegety.jpg')
+        achehety.set_from_pixbuf(pixbuf.scale_simple(600, 200, GdkPixbuf.InterpType.BILINEAR))
+        win.add(achehety)
 
         self.entry = Gtk.Entry()
-        self.entry.connect("activate", self.traducir_cb, traducido)
-        self.entry.connect("backspace", self.__backspace_cb, traducido)
+        self.entry.connect("activate", self.translate_cb)
+        self.entry.connect("backspace", self.backspace_cb)
         win.add(self.entry)
 
-        # creando scrolled
-        scrolled_window = Gtk.ScrolledWindow()
-        scrolled_window.set_border_width(10)
-        scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.ALWAYS)
-        scrolled_window.add_with_viewport(dic)
+        dic = Gtk.TextView()
+        dic.set_wrap_mode(Gtk.WrapMode.WORD)
+        dic.set_editable(False)
 
-        #Disenho de ventana
-        win.add(traducido)
-        win.add(hbox2)
-        win.add(achehety)
-        win.add(scrolled_window)
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_border_width(10)
+        scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.ALWAYS)
+        scroll.add(dic)
+        win.add(scroll)
 
         self.show_all()
+        self.load_file(dic.get_buffer())
 
     def __make_toolbar(self):
         # toolbar with the new toolbar redesign
@@ -126,7 +116,7 @@ class HablandoGuarani(activity.Activity):
 
         share_button = ShareButton(self)
         toolbar_box.toolbar.insert(share_button, -1)
-        
+
         separator = Gtk.SeparatorToolItem()
         separator.props.draw = False
         separator.set_expand(True)
@@ -140,32 +130,43 @@ class HablandoGuarani(activity.Activity):
         toolbar_box.toolbar.show_all()
 
     def make_button(self, letter, color=None):
-        button = Gtk.Button(parser.get('dic','A'))
-        button.connect('clicked', self.__agregar, letter)
+        button = Gtk.Button(self.parser.get('dic',letter))
+        button.connect('clicked', self.add_letter, letter)
         self.buttonbox_letters.add(button)
 
         if color != None:
             button.modify_bg(Gtk.StateType.NORMAL, Gdk.Color.parse(color)[1])
 
-    def __agregar__(self, bo1, Data=None):
+    def add_letter(self, widget, letter):
         parser = SafeConfigParser()
-        parser.read('config.ini')       
-        self.entry.set_text(self.entry.get_text() + parser.get('dic', Data))
+        parser.read('config.ini')
+        self.entry.set_text(self.entry.get_text() + parser.get('dic', letter))
 
-    def traducir_cb(self, traducido=None):
+    def load_file(self, textbuffer):
+        path = "lang/guarani/dic.txt"
+        infile = open(path, "r")
+
+        with open(path) as file:
+            string = file.read()
+            textbuffer.set_text(string)
+            file.close()
+
+
+    def translate_cb(self, widget):
         entry = self.entry.get_text()+' = '
-        cargar = traducido.get_buffer()
+        cargar = self.textview.get_buffer()
         infile = "lang/guarani/dic.txt"
+
         with open(infile, 'r') as f:
             for line in f:
                 if line.lstrip().startswith(entry.capitalize()):
                     line = line.rstrip()
                     cargar.set_text(line) 
-                       break
+                    break
 
             if entry != line:
                 cargar.set_text('No se ha encontrado coincidencia')
 
-    def __backspace_cb(self, traducido=None):
-        cargar = traducido.get_buffer()
+    def backspace_cb(self, widget):
+        cargar = self.textview.get_buffer()
         cargar.set_text('')
