@@ -78,6 +78,11 @@ class HablandoGuarani(activity.Activity):
         bo6 = self.make_button('Y')
         bo7 = self.make_button('G', ORANGE)
 
+        self.entry = Gtk.Entry()
+        self.entry.connect("activate", self.translate_cb)
+        self.entry.connect("backspace", self.backspace_cb)
+        win.add(self.entry)
+
         hbox2 = Gtk.HBox()
         win.add(hbox2)
 
@@ -85,11 +90,6 @@ class HablandoGuarani(activity.Activity):
         pixbuf = GdkPixbuf.Pixbuf.new_from_file('images/achegety.jpg')
         achehety.set_from_pixbuf(pixbuf.scale_simple(600, 200, GdkPixbuf.InterpType.BILINEAR))
         win.add(achehety)
-
-        self.entry = Gtk.Entry()
-        self.entry.connect("activate", self.translate_cb)
-        self.entry.connect("backspace", self.backspace_cb)
-        win.add(self.entry)
 
         dic = Gtk.TextView()
         dic.set_wrap_mode(Gtk.WrapMode.WORD)
@@ -153,19 +153,20 @@ class HablandoGuarani(activity.Activity):
 
 
     def translate_cb(self, widget):
-        entry = self.entry.get_text()+' = '
+        text = self.entry.get_text().lower().strip()
         cargar = self.textview.get_buffer()
         infile = "lang/guarani/dic.txt"
 
         with open(infile, 'r') as f:
             for line in f:
-                if line.lstrip().startswith(entry.capitalize()):
+                word = line.split("=")[0].lower().strip()
+                if (text == word):
                     line = line.rstrip()
-                    cargar.set_text(line) 
-                    break
+                    cargar.set_text(line)
 
-            if entry != line:
-                cargar.set_text('No se ha encontrado coincidencia')
+                    return
+
+        cargar.set_text('No se ha encontrado coincidencia')
 
     def backspace_cb(self, widget):
         cargar = self.textview.get_buffer()
